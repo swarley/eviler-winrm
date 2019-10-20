@@ -7,7 +7,13 @@ require 'eviler_winrm/connection'
 require 'eviler_winrm/logger'
 require 'eviler_winrm/cli'
 
-Dir.glob(File.join(File.expand_path('../plugins', __dir__), '*.rb')).each do |file|
-  EvilerWinRM::LOGGER.info("Loading plugin #{File.basename file, '.rb'}")
-  load file
+Gem.find_files("eviler_winrm/plugins/*.rb").each do |path|
+  name = File.basename(path, '.rb')
+  EvilerWinRM::LOGGER.debug("Loading plugin `#{name}'")
+  begin
+    require path
+  rescue Exception => e
+    EvilerWinRM::LOGGER.warn("Failed to load plugin `#{name}'")
+    EvilerWinRM::LOGGER.warn(e.message)
+  end
 end
