@@ -2,11 +2,10 @@ module EvilerWinRM
   class Command
     attr_reader :conn
     attr_reader :name
-    attr_reader :aliases
     attr_accessor :shell
 
-    def initialize
-      @aliases = []
+    def call
+      raise Exception, 'A command must define a call method'
     end
 
     def conn

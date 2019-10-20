@@ -54,7 +54,20 @@ module EvilerWinRM
     end
 
     def interactive
+      EvilerWinRM::LOGGER.info('Establishing connection')
+      
+      Thread.new do
+        sleep 5
+        break if @connected
+        EvilerWinRM::LOGGER.warn("It's taking a while to connect")
+        sleep 10
+        break if @connected
+        EvilerWinRM::LOGGER.error('Unable to connect')
+        exit
+      end
+
       @conn.shell(:powershell) do |shell|
+        EvilerWinRM::LOGGER.info('Connected')
         @shell = shell
         loop do
           compiled_prompt = shell.run("echo \"#{@prompt}\"").output.chomp.gsub('_EVIL_COLOR_', "\e")

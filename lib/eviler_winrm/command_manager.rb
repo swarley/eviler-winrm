@@ -16,6 +16,10 @@ module EvilerWinRM
           false
         end
       end
+
+      def commands
+        @commands
+      end
     end
   end
 end
