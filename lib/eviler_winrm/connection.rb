@@ -58,15 +58,19 @@ module EvilerWinRM
       
       Thread.new do
         sleep 5
-        break if @connected
+        next if @connected
         EvilerWinRM::LOGGER.warn("It's taking a while to connect")
         sleep 10
-        break if @connected
+        next if @connected
         EvilerWinRM::LOGGER.error('Unable to connect')
         exit
       end
 
       @conn.shell(:powershell) do |shell|
+        # We can't be sure that we're connected until a command returns
+        shell.run('echo Health check')
+        @connected = true
+
         EvilerWinRM::LOGGER.info('Connected')
         @shell = shell
         loop do
@@ -88,6 +92,7 @@ module EvilerWinRM
         end
       end
     rescue SignalException
+      print "\n"
       LOGGER.info('Interrupt recieved. Exiting')
     end
   end
