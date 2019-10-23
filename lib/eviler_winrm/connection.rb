@@ -34,6 +34,7 @@ module EvilerWinRM
       proto = args[:ssl] ? 'https' : 'http'
       endpoint = args[:url].delete_prefix('/')
       port = args[:port] || (args[:ssl] ? 5986 : 5985)
+      ip = ip.match?(Resolv::IPv6::Regex) ? "[#{ip}]" : ip
       url = format('%s://%s:%i/%s', proto, ip, port, endpoint)
 
       if args[:ssl]
