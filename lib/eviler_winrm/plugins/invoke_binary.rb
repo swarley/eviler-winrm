@@ -1,10 +1,19 @@
 require 'base64'
 
 class InvokeBinaryCommand < EvilerWinRM::Command
-  NAME = 'Invoke-Binary'
+  NAME = 'exec'
   ALIASES = []
 
+  def initialize
+    @loaded = false
+  end
+
   def call(args)
+    unless @loaded
+      conn.shell.run(File.read(File.expand_path('../../../data/Invoke-Binary.ps1', __dir__)))
+      @loaded = true
+    end
+
     if args.size < 1
       EvilerWinRM::LOGGER.error('Please provide an executable to invoke')
       return

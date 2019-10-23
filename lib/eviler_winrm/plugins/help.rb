@@ -2,6 +2,12 @@ class HelpCommand < EvilerWinRM::Command
   NAME = 'help'
   ALIASES = %w[?]
   HELP = 'Display help messages for commands'
+  USAGE = 'help upload'
+  COMPLETION = proc do |input|
+    EvilerWinRM::CommandManager.commands.select do |cmd|
+          cmd.class::NAME.start_with? input || (cmd.class::ALIASES.any? {|a| a.start_with? input })
+    end.map {|cmd| cmd.class::NAME }
+  end
 
   def call(args)
     cmd_name = args.first
@@ -16,6 +22,6 @@ class HelpCommand < EvilerWinRM::Command
 
     klass = cmd.class
     puts klass::HELP if klass.const_defined? :HELP
-    puts klass::USAGE if klass.const_defined? :USAGE
+    puts format("USAGE: %s%s", EvilerWinRM::CONNECTION.sigil, klass::USAGE) if klass.const_defined? :USAGE
   end
 end

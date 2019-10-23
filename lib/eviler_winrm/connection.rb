@@ -13,24 +13,27 @@ module EvilerWinRM
     attr_reader :conn
     attr_reader :shell
     attr_accessor :prompt
+    attr_accessor :sigil
+    attr_reader :scripts_path
+    attr_reader :args
 
     def initialize(args)
       @args = args
       @prompt = args[:prompt]
-
+      @sigil = args[:sigil]
+      @scripts_path = args[:scripts]
       ip = args[:ip]
 
       begin
         ip = Resolv.getaddress(args[:ip])
+        LOGGER.debug("Resolving `#{args[:ip]}' to #{ip}") if ip != args[:ip]
       rescue Resolv::ResolvError
         LOGGER.warn("Unable to resolve IP for `#{args[:ip]}'")
       end
 
-      LOGGER.debug("Resolving `#{args[:ip]}' to #{ip}") if ip != args[:ip]
-
-      proto = args.ssl? ? 'https' : 'http'
+      proto = args[:ssl] ? 'https' : 'http'
       endpoint = args[:url].delete_prefix('/')
-      port = args[:port] || (args.ssl? ? 5986 : 5985)
+      port = args[:port] || (args[:ssl] ? 5986 : 5985)
       url = format('%s://%s:%i/%s', proto, ip, port, endpoint)
 
       if args[:ssl]
@@ -73,12 +76,36 @@ module EvilerWinRM
 
         EvilerWinRM::LOGGER.info('Connected')
         @shell = shell
+        Readline.completer_word_break_characters = "\"' "
+        Readline.completion_append_character = ''
+        Readline.completion_proc = proc do |buff|
+          if buff.start_with?(@sigil) && Readline.line_buffer.split.size == 1
+            cmd = buff.delete_prefix(@sigil)
+            EvilerWinRM::CommandManager.autocomplete_suggestions(@sigil, cmd)
+          
+          elsif (cmd = EvilerWinRM::CommandManager.find_command(Readline.line_buffer.delete_prefix(@sigil).split[0]))
+            klass = cmd.class
+            klass::COMPLETION.call(buff) if klass.const_defined? :COMPLETION
+          
+          else
+            maybe_cmd = Readline.line_buffer.split.first
+
+            if buff[0] == '-'
+              maybe_cmd = Readline.line_buffer.split.first
+              output = shell.run("(Get-Command #{maybe_cmd}).Parameters.Keys")
+              output.stdout.lines.select {|x| x.start_with? buff[1..-1] }.map {|x| '-' + x.chomp }
+            else
+              EvilerWinRM.remote_dir_completion(buff)
+            end
+          end
+        end
+
         loop do
           compiled_prompt = shell.run("echo \"#{@prompt}\"").output.chomp.gsub('_EVIL_COLOR_', "\e")
           command = Readline.readline(compiled_prompt, true)
 
-          if command.start_with? '>>'
-            cmd, args = command.delete_prefix('>>').lstrip.split(' ', 2)
+          if command.start_with? @sigil
+            cmd, args = command.delete_prefix(@sigil).lstrip.split(' ', 2)
             
             unless EvilerWinRM::CommandManager.process_command(cmd, args&.shellsplit, shell)
               LOGGER.error("No command `#{cmd}'")

@@ -5,6 +5,26 @@ class DownloadCommand < EvilerWinRM::Command
   NAME = 'download'
   ALIASES = []
   HELP = 'Download a file from the remote system.'
+  USAGE = 'download <REMOTE PATH> [LOCAL PATH]'
+  COMPLETION = proc do |input|
+    begin
+      curr_args = Readline.line_buffer.shellsplit[1..-1]
+    rescue Exception => ex
+      before, _, curr_input = Readline.line_buffer.rpartition(/[\"\']/)
+      curr_args = before.shellsplit << curr_input
+    end
+
+    pos = curr_args.length
+    pos += 1 if input.empty?
+
+    if pos <= 1
+      EvilerWinRM.remote_dir_completion(input)
+    elsif pos == 2
+      EvilerWinRM.local_dir_completion(input)
+    else
+      []
+    end
+  end
 
   def call(args)
     if args.empty?
@@ -44,11 +64,14 @@ class DownloadCommand < EvilerWinRM::Command
     EvilerWinRM::LOGGER.info("Downloading `#{fname}' to `#{download_path}'")
 
     begin
-      progress_bar = ProgressBar.new(size, :bar, :counter, :percentage, :elapsed, :eta)
+      # Progress bar doesn't work for download. Something in winrm-fs makes this the case
+      # The block that can be passed to upload seemingly doesn't apply for download
+
+      # progress_bar = ProgressBar.new(size, :bar, :counter, :percentage, :elapsed, :eta)
       file_manager.download(fname, download_path) do |bytes_copied, _|
-        progress_bar.increment!(bytes)
+        # progress_bar.increment!(bytes)
       end
-      progress_bar.increment! progress_bar.remaining
+      # progress_bar.increment! progress_bar.remaining
       EvilerWinRM::LOGGER.info("File downloaded successfully")
     rescue Exception => ex
       EvilerWinRM::LOGGER.error(ex)

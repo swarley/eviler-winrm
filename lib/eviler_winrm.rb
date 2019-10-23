@@ -17,3 +17,15 @@ Gem.find_files("eviler_winrm/plugins/*.rb").each do |path|
     EvilerWinRM::LOGGER.warn(e.message)
   end
 end
+
+module EvilerWinRM
+  def self.remote_dir_completion(buffer)
+    base_path, sep, _ = buffer.rpartition(/[\\\/]/)
+    output = EvilerWinRM::CONNECTION.shell.run("Get-ChildItem -Name #{buffer}*")
+    output.stdout.lines.map {|line|  base_path + sep + line.chomp }
+  end
+
+  def self.local_dir_completion(buffer)
+    Dir.glob(buffer + '*')
+  end
+end
