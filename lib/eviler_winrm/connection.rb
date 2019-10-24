@@ -7,6 +7,7 @@ require 'readline'
 require 'resolv'
 require 'shellwords'
 require 'winrm'
+require 'httpclient/http_fix'
 
 module EvilerWinRM  
   class Connection
