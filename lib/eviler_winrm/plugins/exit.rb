@@ -1,10 +1,12 @@
+# frozen_string_literal: true
+
 class ExitCommand < EvilerWinRM::Command
   NAME = 'exit'
-  ALIASES = []
+  ALIASES = [].freeze
   HELP = 'Exit the shell'
 
   def call(_)
-    puts "Exiting".red
+    puts 'Exiting'.red
     exit
   end
 end

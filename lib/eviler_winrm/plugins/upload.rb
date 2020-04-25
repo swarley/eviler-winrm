@@ -1,15 +1,17 @@
+# frozen_string_literal: true
+
 require 'progress_bar'
 require 'winrm-fs'
 
 class UploadCommand < EvilerWinRM::Command
   NAME = 'upload'
-  ALIASES = []
+  ALIASES = [].freeze
   HELP = 'Upload a local file to the remote server'
   USAGE = 'upload <LOCAL PATH> [REMOTE PATH]'
   COMPLETION = proc do |input|
     begin
       curr_args = Readline.line_buffer.shellsplit[1..-1]
-    rescue Exception => ex
+    rescue StadnardError
       before, _, curr_input = Readline.line_buffer.rpartition(/[\"\']/)
       curr_args = before.shellsplit << curr_input
     end
@@ -26,9 +28,9 @@ class UploadCommand < EvilerWinRM::Command
     end
   end
 
-  CHECK_PS_CMD = <<~EOF
+  CHECK_PS_CMD = <<~CMD
     ((Get-Acl %s).Access | ?{$_.IdentityReference -match $env:userName} | Select FileSystemRights).FileSystemRights
-  EOF
+  CMD
 
   def call(args)
     if args.empty?
@@ -45,30 +47,29 @@ class UploadCommand < EvilerWinRM::Command
       EvilerWinRM::LOGGER.error("Unable to read `#{fname}'")
       return
     end
-    
+
     upload_path = args.shift || fname
 
     file_manager = WinRM::FS::FileManager.new(conn.conn)
 
     EvilerWinRM::LOGGER.info("Uploading `#{fname}' to `#{upload_path}'")
 
-    out = conn.shell.run(format(CHECK_PS_CMD, upload_path.rpartition(%r"[\\/]").first))
+    out = conn.shell.run(format(CHECK_PS_CMD, upload_path.rpartition(%r{[\\/]}).first))
     if out.stdout.empty?
       EvilerWinRM::LOGGER.error('Unable to create remote file, access denied.')
       return
     end
-    
+
     begin
       # Progress bars are being weird. temporarily disabled
-      #progress_bar = ProgressBar.new(File.size(fname), :bar, :counter, :percentage, :elapsed, :eta)
+      # progress_bar = ProgressBar.new(File.size(fname), :bar, :counter, :percentage, :elapsed, :eta)
       file_manager.upload(fname, upload_path) do |bytes_copied, _|
-        #progress_bar.increment!(bytes_copied)
+        # progress_bar.increment!(bytes_copied)
       end
       # progress_bar.increment! progress_bar.remaining if progress_bar.remaining
-      EvilerWinRM::LOGGER.info("File uploaded successfully")
-    rescue Exception => ex
-      puts ex.backtrace
-      EvilerWinRM::LOGGER.error(ex)
+      EvilerWinRM::LOGGER.info('File uploaded successfully')
+    rescue StandardError => e
+      EvilerWinRM::LOGGER.error(e)
     end
   end
 end

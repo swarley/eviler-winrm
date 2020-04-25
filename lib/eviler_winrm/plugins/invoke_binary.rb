@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
 require 'base64'
 
 class InvokeBinaryCommand < EvilerWinRM::Command
   NAME = 'exec'
-  ALIASES = []
+  ALIASES = [].freeze
 
   def initialize
     @loaded = false
@@ -14,7 +16,7 @@ class InvokeBinaryCommand < EvilerWinRM::Command
       @loaded = true
     end
 
-    if args.size < 1
+    if args.empty?
       EvilerWinRM::LOGGER.error('Please provide an executable to invoke')
       return
     end
@@ -32,8 +34,8 @@ class InvokeBinaryCommand < EvilerWinRM::Command
       return
     end
 
-    exe_64 = Base64.strict_encode64(File.binread(fname))
-    conn.shell.run("Invoke-Binary", [exe_64] + args) do |stdout, stderr|
+    exe64 = Base64.strict_encode64(File.binread(fname))
+    conn.shell.run('Invoke-Binary', [exe64] + args) do |stdout, stderr|
       STDOUT.print(stdout)
       STDERR.print(stderr&.red)
     end

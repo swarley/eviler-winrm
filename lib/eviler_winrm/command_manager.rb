@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module EvilerWinRM
   class CommandManager
     @commands = []
@@ -8,9 +10,9 @@ module EvilerWinRM
       end
 
       def process_command(str, args, shell)
-        if cmd = @commands.find {|cmd| (cmd.class::ALIASES + [cmd.class::NAME]).include? str }
-          cmd.shell = shell
-          cmd.call(args)
+        if (command = @commands.find { |cmd| (cmd.class::ALIASES + [cmd.class::NAME]).include? str })
+          command.shell = shell
+          command.call(args)
           true
         else
           false
@@ -19,8 +21,9 @@ module EvilerWinRM
 
       def autocomplete_suggestions(sigil, str)
         sugg = @commands.select do |cmd|
-          cmd.class::NAME.start_with? str || (cmd.class::ALIASES.any? {|a| a.start_with? str })
-        end.map {|cmd| cmd.class::NAME }
+          cmd.class::NAME.start_with?(str) || (cmd.class::ALIASES.any? { |a| a.start_with? str })
+        end
+        sugg.map! { |cmd| cmd.class::NAME }
 
         if sugg.size == 1
           sugg[0] = sigil + sugg[0]
@@ -31,7 +34,7 @@ module EvilerWinRM
 
       def find_command(name)
         @commands.find do |cmd|
-          cmd.class::NAME == name || cmd.class::ALIASES.any? {|a| a == name }
+          cmd.class::NAME == name || cmd.class::ALIASES.any? { |a| a == name }
         end
       end
 
@@ -39,9 +42,7 @@ module EvilerWinRM
         !find_command(str).nil?
       end
 
-      def commands
-        @commands
-      end
+      attr_reader :commands
     end
   end
 end

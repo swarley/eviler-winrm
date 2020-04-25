@@ -1,6 +1,7 @@
+# frozen_string_literal: true
+
 module EvilerWinRM
   class Command
-    attr_reader :conn
     attr_reader :name
     attr_accessor :shell
 
@@ -9,7 +10,7 @@ module EvilerWinRM
     end
 
     def conn
-      EvilerWinRM::CONNECTION
+      @conn || EvilerWinRM::CONNECTION
     end
 
     def self.inherited(klass)

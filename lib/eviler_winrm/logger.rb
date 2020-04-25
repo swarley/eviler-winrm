@@ -10,8 +10,8 @@ module EvilerWinRM
       'FATAL' => :magenta,
       'INFO' => :yellow,
       'WARN' => :light_red
-    }
-    def call(sev, time, prog, msg)
+    }.freeze
+    def call(sev, _time, _prog, msg)
       "[#{sev}] #{msg}\n".send(SEVERITIES[sev] || :white)
     end
   end

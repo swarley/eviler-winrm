@@ -20,7 +20,7 @@ module EvilerWinRM
       prompt: EvilerWinRM::DEFAULT_PROMPT,
       url: '/wsman',
       verbose: 1
-    }
+    }.freeze
 
     OPTIONS = Slop::Options.new
     OPTIONS.yield_self do |o|
@@ -35,11 +35,13 @@ module EvilerWinRM
         puts o
         exit
       end
+      o.string '-H', '--hash', 'NTLM Hash'
       o.string '-i', '--ip', 'Remote host IP or hostname'
       o.file '-k', '--priv-key', 'Path to private key certificate'
       o.string '-p', '--password', 'Password'
       o.string '-P', '--port', 'Remote host port'
       o.string '-q', '--prompt', 'Set prompt'
+      o.string '-r', '--realm', 'Kerberos Realm'
       o.dir '-s', '--scripts', 'Powershell scripts local path'
       o.string '-S', '--ssl', 'Enable SSL'
       o.string '-u', '--user', 'Username'
@@ -74,9 +76,7 @@ module EvilerWinRM
     args = DEFAULT_ARGS
     slop_args = PARSER.parse(ARGV).to_h
 
-    if slop_args[:eviler_profile]
-      args.merge!(YAML.load_file(slop_args[:eviler_profile]))
-    end
+    args.merge!(YAML.load_file(slop_args[:eviler_profile])) if slop_args[:eviler_profile]
 
     ARGS = args.merge slop_args.compact
   rescue Slop::Error => e

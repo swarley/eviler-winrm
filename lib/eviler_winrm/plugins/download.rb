@@ -1,15 +1,17 @@
+# frozen_string_literal: true
+
 require 'progress_bar'
 require 'winrm-fs'
 
 class DownloadCommand < EvilerWinRM::Command
   NAME = 'download'
-  ALIASES = []
+  ALIASES = [].freeze
   HELP = 'Download a file from the remote system.'
   USAGE = 'download <REMOTE PATH> [LOCAL PATH]'
   COMPLETION = proc do |input|
     begin
       curr_args = Readline.line_buffer.shellsplit[1..-1]
-    rescue Exception => ex
+    rescue StandardError
       before, _, curr_input = Readline.line_buffer.rpartition(/[\"\']/)
       curr_args = before.shellsplit << curr_input
     end
@@ -33,7 +35,7 @@ class DownloadCommand < EvilerWinRM::Command
     end
 
     fname = args.shift
-    
+
     out = conn.shell.run("(Get-Item '#{fname}').length")
     stderr = out.stderr
 
@@ -41,14 +43,14 @@ class DownloadCommand < EvilerWinRM::Command
       EvilerWinRM::LOGGER.error("Could not find `#{fname}'")
       return
     elsif stderr.start_with? 'Access is denied'
-      EvilerWinRM::LOGGER.error("Access Denied")
+      EvilerWinRM::LOGGER.error('Access Denied')
       return
     elsif !stderr.empty?
       EvilerWinRM::LOGGER.error("Encountered an unknown error reading `#{fname}'")
       EvilerWinRM::LOGGER.error(stderr)
     end
 
-    size = out.stdout.chomp.to_i
+    # size = out.stdout.chomp.to_i
 
     download_path = args.shift || fname
 
@@ -72,9 +74,9 @@ class DownloadCommand < EvilerWinRM::Command
         # progress_bar.increment!(bytes)
       end
       # progress_bar.increment! progress_bar.remaining
-      EvilerWinRM::LOGGER.info("File downloaded successfully")
-    rescue Exception => ex
-      EvilerWinRM::LOGGER.error(ex)
+      EvilerWinRM::LOGGER.info('File downloaded successfully')
+    rescue StandardError => e
+      EvilerWinRM::LOGGER.error(e)
     end
   end
 end

@@ -9,7 +9,7 @@ require 'shellwords'
 require 'winrm'
 require 'httpclient/http_fix'
 
-module EvilerWinRM  
+module EvilerWinRM
   class Connection
     attr_reader :conn
     attr_reader :shell
@@ -24,6 +24,12 @@ module EvilerWinRM
       @sigil = args[:sigil]
       @scripts_path = args[:scripts]
       ip = args[:ip]
+
+      if args[:hash]
+        LOGGER.warn('NTLM hash will override the provided password') if args[:password]
+        LOGGER.war('Provided hash contains non HMAC-MD5 characters') if args[:hash] =~ /\H/
+        args[:password] = "00000000000000000000000000000000:#{args[:hash]}"
+      end
 
       begin
         ip = Resolv.getaddress(args[:ip])
@@ -48,6 +54,14 @@ module EvilerWinRM
           transport: :ssl,
           **keys.compact
         )
+      elsif args[:realm]
+        @conn = ::WinRM::Connection.new(
+          endpoint: url,
+          user: '',
+          password: '',
+          transport: :kerberos,
+          realm: args[:realm]
+        )
       else
         @conn = ::WinRM::Connection.new(
           endpoint: url,
@@ -60,13 +74,15 @@ module EvilerWinRM
 
     def interactive
       EvilerWinRM::LOGGER.info('Establishing connection')
-      
+
       Thread.new do
         sleep 5
         next if @connected
+
         EvilerWinRM::LOGGER.warn("It's taking a while to connect")
         sleep 10
         next if @connected
+
         EvilerWinRM::LOGGER.error('Unable to connect')
         exit
       end
@@ -84,45 +100,42 @@ module EvilerWinRM
           if buff.start_with?(@sigil) && Readline.line_buffer.split.size == 1
             cmd = buff.delete_prefix(@sigil)
             EvilerWinRM::CommandManager.autocomplete_suggestions(@sigil, cmd)
-          
+
           elsif (cmd = EvilerWinRM::CommandManager.find_command(Readline.line_buffer.delete_prefix(@sigil).split[0]))
             klass = cmd.class
             klass::COMPLETION.call(buff) if klass.const_defined? :COMPLETION
-          
-          else
-            maybe_cmd = Readline.line_buffer.split.first
 
-            if buff[0] == '-'
-              maybe_cmd = Readline.line_buffer.split.first
-              output = shell.run("(Get-Command #{maybe_cmd}).Parameters.Keys")
-              output.stdout.lines.select {|x| x.start_with? buff[1..-1] }.map {|x| '-' + x.chomp }
-            else
-              EvilerWinRM.remote_dir_completion(buff)
-            end
+          elsif buff[0] == '-'
+            maybe_cmd = Readline.line_buffer.split.first
+            output = shell.run("(Get-Command #{maybe_cmd}).Parameters.Keys")
+            output.stdout.lines.select { |x| x.start_with? buff[1..-1] }.map { |x| '-' + x.chomp }
+          else
+            EvilerWinRM.remote_dir_completion(buff)
           end
         end
 
-        loop do
-          compiled_prompt = shell.run("echo \"#{@prompt}\"").output.chomp.gsub('_EVIL_COLOR_', "\e")
-          command = Readline.readline(compiled_prompt, true)
+        begin
+          loop do
+            compiled_prompt = shell.run("echo \"#{@prompt}\"").output.chomp.gsub('_EVIL_COLOR_', "\e")
+            command = Readline.readline(compiled_prompt, true)
 
-          if command.start_with? @sigil
-            cmd, args = command.delete_prefix(@sigil).lstrip.split(' ', 2)
-            
-            unless EvilerWinRM::CommandManager.process_command(cmd, args&.shellsplit, shell)
-              LOGGER.error("No command `#{cmd}'")
+            if command.start_with? @sigil
+              cmd, args = command.delete_prefix(@sigil).lstrip.split(' ', 2)
+
+              LOGGER.error("No command `#{cmd}'") unless EvilerWinRM::CommandManager.process_command(cmd, args&.shellsplit, shell)
+              next
             end
-            next
+            shell.run(command) do |stdout, stderr|
+              STDOUT.print(stdout)
+              STDERR.print(stderr&.red)
+            end
           end
-          shell.run(command) do |stdout, stderr|
-            STDOUT.print(stdout)
-            STDERR.print(stderr&.red)
-          end
+        rescue Interrupt
+          confirmation = Readline.readline('Would you like to exit? [y/N] ')
+          retry unless confirmation.downcase == 'y'
+          LOGGER.info('Interrupt recieved. Exiting')
         end
       end
-    rescue SignalException
-      print "\n"
-      LOGGER.info('Interrupt recieved. Exiting')
     end
   end
 end

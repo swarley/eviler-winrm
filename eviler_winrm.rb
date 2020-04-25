@@ -6,6 +6,6 @@ require 'eviler_winrm'
 
 module EvilerWinRM
   CONNECTION = EvilerWinRM::Connection.new(EvilerWinRM::ARGS)
-end 
+end
 
 EvilerWinRM::CONNECTION.interactive
